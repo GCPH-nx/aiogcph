@@ -1,0 +1,44 @@
+name: Get Latest Release Asset
+
+on:
+  workflow_dispatch:    # allows manual triggering
+
+jobs:
+  get-latest-asset:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Run script to get asset URL
+      run: |
+        node -e "
+        const https = require('https');
+        const owner = 'GCPH-nx';
+        const repo = 'aiogcph';
+        const options = {
+          hostname: 'api.github.com',
+          path: `/repos/${owner}/${repo}/releases/latest`,
+          headers: { 'User-Agent': 'node.js' }
+        };
+        https.get(options, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => {
+            const release = JSON.parse(data);
+            if (release.assets && release.assets.length > 0) {
+              console.log('Latest asset URL:', release.assets[0].browser_download_url);
+            } else {
+              console.log('No assets found in latest release.');
+            }
+          });
+        }).on('error', e => {
+          console.error(e);
+        });
+        "
